@@ -30,7 +30,8 @@ follow Floam, ikd-tree
 
 ## download test bag
 
-TBA...
+链接：https://pan.baidu.com/s/1VGxRfl-kxcw5xIl2ibrzoA 
+提取码：5nlm
 
 ## run
 
