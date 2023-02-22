@@ -117,14 +117,16 @@ int main(int argc, char **argv)
     double scan_period = 0.1;
     double max_dis = 60.0;
     double min_dis = 2.0;
+    std::string laser_topic = "/velodyne_points";
 
     nh.getParam("/scan_period", scan_period);
     nh.getParam("/vertical_angle", vertical_angle);
     nh.getParam("/max_dis", max_dis);
     nh.getParam("/min_dis", min_dis);
     nh.getParam("/scan_line", scan_line);
+    nh.getParam("/laser_topic", laser_topic);
 
-    ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 100, velodyneHandler);
+    ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>(laser_topic, 100, velodyneHandler);
 
     pubLaserCloud = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points_convert", 100);
 

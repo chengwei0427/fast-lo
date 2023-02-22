@@ -24,6 +24,9 @@
 
 // local lib
 #include "laserOdomClass.h"
+#include "utils.h"
+
+#define DEBUG_FILE_DIR(name) (std::string(std::string(ROOT_DIR) + "Log/" + name))
 
 LaserOdomClass odomEstimation;
 std::mutex mutex_lock;
@@ -33,6 +36,8 @@ std::queue<sensor_msgs::PointCloud2ConstPtr> pointCloudSurfBuf;
 ros::Publisher pubLaserOdometry;
 ros::Publisher pub_selected_degenerate, pub_selected_surf, pub_selected_corner;
 ros::Publisher pub_surf_map, pub_edge_map;
+
+std::string root_dir = ROOT_DIR;
 
 void velodyneSurfHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
 {
@@ -45,6 +50,11 @@ void velodyneEdgeHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     mutex_lock.lock();
     pointCloudEdgeBuf.push(laserCloudMsg);
     mutex_lock.unlock();
+}
+
+void saveTrajectoryTUMformat(std::fstream &fout, std::string &stamp, Eigen::Vector3d &xyz, Eigen::Quaterniond &xyzw)
+{
+    fout << stamp << " " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " " << xyzw.x() << " " << xyzw.y() << " " << xyzw.z() << " " << xyzw.w() << std::endl;
 }
 
 void visual_factors(const std::vector<FactorParam> &params, const ros::Time &stamp,
@@ -153,11 +163,16 @@ void odom_estimation()
             else
             {
                 tc.tic();
-                odomEstimation.updatePointsToMap(pointcloud_edge_in, pointcloud_surf_in);
+                faster_lio::Timer::Evaluate([&]()
+                                            { odomEstimation.updatePointsToMap(pointcloud_edge_in, pointcloud_surf_in); },
+                                            "odom estimate");
+
                 total_frame++;
                 float time_temp = tc.toc();
                 total_time += time_temp;
                 ROS_INFO("average odom estimation time %f ms, current estimate takes %f ms \n", total_time / total_frame, time_temp);
+                static std::fstream ft(DEBUG_FILE_DIR("laserodom_time.txt"), std::ios::out);
+                ft << time_temp << std::endl;
             }
 
             Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
@@ -166,6 +181,19 @@ void odom_estimation()
 
             visual_factors(odomEstimation.getEdgeFactor(), pointcloud_time, q_current, t_current, 0, 100, pub_selected_corner);
             visual_factors(odomEstimation.getSurfFactor(), pointcloud_time, q_current, t_current, 150, 250, pub_selected_surf);
+
+            if (1)
+            {
+                static std::fstream f(DEBUG_FILE_DIR("laserodom_trajectory_TUM.txt"), std::ios::out);
+                static std::ostringstream stamp;
+                stamp.str("");
+                if (f.is_open())
+                {
+                    // std::string tstamp = to_string(ros::Time().fromSec(laser_odometry->time));
+                    std::string tstamp = std::to_string(pointcloud_time.toSec());
+                    saveTrajectoryTUMformat(f, tstamp, t_current, q_current);
+                }
+            }
 
             static tf::TransformBroadcaster br;
             tf::Transform transform;
@@ -211,6 +239,8 @@ int main(int argc, char **argv)
     double plane_noise_threshold = 0.05;
     double min_noise_prior = 0.02;
     double cube_len = 200;
+    double noise_bound = 0.01;
+    double gnc_factor = 11.0;
 
     nh.getParam("/edge_resolution", edge_res);
     nh.getParam("/surf_resolution", surf_res);
@@ -219,6 +249,8 @@ int main(int argc, char **argv)
     nh.getParam("/plane_noise_threshold", plane_noise_threshold);
     nh.getParam("/min_noise_prior", min_noise_prior);
     nh.getParam("/cube_len", cube_len);
+    nh.getParam("/noise_bound", noise_bound);
+    nh.getParam("/gnc_factor", gnc_factor);
 
     laserOdomParams params;
     params.edge_res = edge_res;
@@ -228,6 +260,12 @@ int main(int argc, char **argv)
     params.plane_noise_threshold = plane_noise_threshold;
     params.min_noise_prior = min_noise_prior;
     params.cube_len = cube_len;
+    params.noise_bound = noise_bound;
+    params.gnc_factor = gnc_factor;
+
+    //  create folder
+    std::string command = "mkdir -p " + std::string(ROOT_DIR) + "Log";
+    system(command.c_str());
 
     odomEstimation.init(params);
     ros::Subscriber subEdgeLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_edge", 100, velodyneEdgeHandler);
@@ -242,6 +280,8 @@ int main(int argc, char **argv)
     std::thread odom_estimation_process{odom_estimation};
 
     ros::spin();
+
+    faster_lio::Timer::PrintAll();
 
     return 0;
 }

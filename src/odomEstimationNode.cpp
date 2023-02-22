@@ -26,11 +26,14 @@
 #include "lidar.h"
 #include "odomEstimationClass.h"
 
+#define DEBUG_FILE_DIR(name) (std::string(std::string(ROOT_DIR) + "Log/" + name))
+
 OdomEstimationClass odomEstimation;
 std::mutex mutex_lock;
 std::queue<sensor_msgs::PointCloud2ConstPtr> pointCloudEdgeBuf;
 std::queue<sensor_msgs::PointCloud2ConstPtr> pointCloudSurfBuf;
 lidar::Lidar lidar_param;
+std::string root_dir = ROOT_DIR;
 
 ros::Publisher pubLaserOdometry;
 void velodyneSurfHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
@@ -44,6 +47,11 @@ void velodyneEdgeHandler(const sensor_msgs::PointCloud2ConstPtr &laserCloudMsg)
     mutex_lock.lock();
     pointCloudEdgeBuf.push(laserCloudMsg);
     mutex_lock.unlock();
+}
+
+void saveTrajectoryTUMformat(std::fstream &fout, std::string &stamp, Eigen::Vector3d &xyz, Eigen::Quaterniond &xyzw)
+{
+    fout << stamp << " " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " " << xyzw.x() << " " << xyzw.y() << " " << xyzw.z() << " " << xyzw.w() << std::endl;
 }
 
 bool is_odom_inited = false;
@@ -101,11 +109,25 @@ void odom_estimation()
                 float time_temp = elapsed_seconds.count() * 1000;
                 total_time += time_temp;
                 ROS_INFO("average odom estimation time %f ms \n \n", total_time / total_frame);
+                static std::fstream ft(DEBUG_FILE_DIR("laserodom_time_floam.txt"), std::ios::out);
+                ft << time_temp << std::endl;
             }
 
             Eigen::Quaterniond q_current(odomEstimation.odom.rotation());
             // q_current.normalize();
             Eigen::Vector3d t_current = odomEstimation.odom.translation();
+            if (1)
+            {
+                static std::fstream f(DEBUG_FILE_DIR("laserodom_trajectory_TUM_floam.txt"), std::ios::out);
+                static std::ostringstream stamp;
+                stamp.str("");
+                if (f.is_open())
+                {
+                    // std::string tstamp = to_string(ros::Time().fromSec(laser_odometry->time));
+                    std::string tstamp = std::to_string(pointcloud_time.toSec());
+                    saveTrajectoryTUMformat(f, tstamp, t_current, q_current);
+                }
+            }
 
             static tf::TransformBroadcaster br;
             tf::Transform transform;
@@ -157,6 +179,10 @@ int main(int argc, char **argv)
     lidar_param.setLines(scan_line);
     lidar_param.setMaxDistance(max_dis);
     lidar_param.setMinDistance(min_dis);
+
+    //  create folder
+    std::string command = "mkdir -p " + std::string(ROOT_DIR) + "Log";
+    system(command.c_str());
 
     odomEstimation.init(lidar_param, map_resolution);
     ros::Subscriber subEdgeLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/laser_cloud_edge", 100, velodyneEdgeHandler);

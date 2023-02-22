@@ -30,7 +30,11 @@
 
 // LOCAL LIB
 #include "TicToc.hpp"
+#ifdef USE_QUATERNIOND
 #include "lidarOptimization.h"
+#else
+#include "lidarOpt.h"
+#endif
 #include "ikd-Tree/ikd_Tree.h"
 
 struct laserOdomParams
@@ -39,6 +43,8 @@ struct laserOdomParams
 	double edge_noise_threshold, plane_noise_threshold;
 	double min_noise_prior;
 	double cube_len;
+	double noise_bound;
+	double gnc_factor;
 	laserOdomParams() {}
 };
 using FactorParam = Eigen::Matrix<double, 3, 4>;
@@ -62,10 +68,15 @@ public:
 	Eigen::Isometry3d odom;
 
 private:
-	// optimization variable
+// optimization variable
+#ifdef USE_QUATERNIOND
 	double parameters[7] = {0, 0, 0, 1, 0, 0, 0};
 	Eigen::Map<Eigen::Quaterniond> q_w_curr = Eigen::Map<Eigen::Quaterniond>(parameters);
 	Eigen::Map<Eigen::Vector3d> t_w_curr = Eigen::Map<Eigen::Vector3d>(parameters + 4);
+#else
+	double parameters[6] = {0, 0, 0, 0, 0, 0};
+	Eigen::Map<Eigen::Matrix<double, 6, 1>> se3_pose_ = Eigen::Map<Eigen::Matrix<double, 6, 1>>(parameters);
+#endif
 
 	Eigen::Isometry3d last_odom;
 	pcl::PointCloud<pcl::PointXYZI>::Ptr laserCloudCornerMap;
@@ -93,10 +104,29 @@ private:
 	TicToc ttc;
 	std::vector<FactorParam> edge_factors, plane_factors, degenerate_factors;
 
-	// function
+// function
+#ifdef USE_QUATERNIOND
 	void addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_in, ceres::Problem &problem, ceres::LossFunction *loss_function);
+
 	void addSurfCostFactor(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_in, ceres::Problem &problem, ceres::LossFunction *loss_function);
+
 	void pointAssociateToMap(pcl::PointXYZI const *const pi, pcl::PointXYZI *const po);
+#else
+	bool updateWeight(Eigen::Matrix<double, 1, Eigen::Dynamic> &weights_, Eigen::Matrix<double, 1, Eigen::Dynamic> &residuals_,
+				   double totalSize_, double noise_bound_sq_, double th1_, double th2_, double mu_);
+
+	void addEdgeCostFactor(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_in,
+					   Eigen::Matrix<double, 1, Eigen::Dynamic> &edge_w_,
+					   Eigen::Matrix<double, 1, Eigen::Dynamic> &edge_res_,
+					   ceres::Problem &problem, ceres::LossFunction *loss_function);
+
+	void addSurfCostFactor(const pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_in,
+					   Eigen::Matrix<double, 1, Eigen::Dynamic> &surf_w_,
+					   Eigen::Matrix<double, 1, Eigen::Dynamic> &surf_res_,
+					   ceres::Problem &problem, ceres::LossFunction *loss_function);
+
+	void pointAssociateToMap(pcl::PointXYZI const *const pi, pcl::PointXYZI *const po, Sophus::SE3d &T);
+#endif
 	void downSamplingScan(const pcl::PointCloud<pcl::PointXYZI>::Ptr &edge_pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr &edge_pc_out,
 					  const pcl::PointCloud<pcl::PointXYZI>::Ptr &surf_pc_in, pcl::PointCloud<pcl::PointXYZI>::Ptr &surf_pc_out);
 	void downSampling(pcl::VoxelGrid<pcl::PointXYZI> &filter, const pcl::PointCloud<pcl::PointXYZI>::Ptr &c_in, double &leaf_size, pcl::PointCloud<pcl::PointXYZI>::Ptr &out);

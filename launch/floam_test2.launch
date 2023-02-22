@@ -1,17 +1,6 @@
 <?xml version="1.0"?>
 <launch>
 
-    
-    <!-- <node pkg="rosbag" type="play" name="rosbag_play" args="clock -r 1.0 /media/cc/A0EC52D0EC52A078/DATA/wistron/new_driver/2021-09-28-14-43-19.bag"/>  -->
-    
-    <!-- For Velodyne VLP-16  
-    <param name="scan_line" value="16" />
-   -->
-
-    <!-- For Velodyne HDL-32 
-    <param name="scan_line" value="32" />
-    -->
-
     <!-- For Velodyne HDL-64 -->
     <param name="scan_line" value="16" />
     
@@ -23,10 +12,19 @@
     <param name="vertical_angle" type="double" value="2.0" />
     <param name="max_dis" type="double" value="90.0" />
     <param name="map_resolution" type="double" value="0.4" />
-    <param name="min_dis" type="double" value="0.2" />
+    <param name="min_dis" type="double" value="3.0" />
     <!--- -->
-    <node pkg="floam" type="floam_odom_estimation_node" name="floam_odom_estimation_node" output="screen"/>
-    <node pkg="floam" type="floam_laser_processing_node" name="floam_laser_processing_node" output="screen"/>
+    <param name="laser_topic" type="string" value="/velodyne_points"/>
+    <param name="edge_resolution" type="double" value="0.2" />
+    <param name="surf_resolution" type="double" value="0.5" />
+    <param name="sampling_rate" type="double" value="2.0" />
+    <param name="min_noise_prior" type="double" value="0.02" />
+    <param name="edge_noise_threshold" type="double" value="0.1" />
+    <param name="plane_noise_threshold" type="double" value="0.05" />
+    <param name="cube_len" type="double" value="800" />
+    <node pkg="floam" type="floam_laser_odom_node" name="floam_laser_odom_node" output="screen"/>
+    <!-- <node pkg="floam" type="floam_feature_extract_node" name="floam_feature_extract_node" output="screen"/> -->
+     <node pkg="floam" type="floam_laser_processing_node" name="floam_laser_processing_node" output="screen"/>
     <node pkg="floam" type="floam_laser_mapping_node" name="floam_laser_mapping_node" output="screen"/>
 
     <node pkg="tf" type="static_transform_publisher" name="word2map_tf"  args="0 0 0 0 0 0 /world /map 10" />

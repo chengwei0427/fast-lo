@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   eigen_conversions
 )
-
+add_definitions(-DROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\")
 # find_package(Eigen3)
 # if(NOT EIGEN3_FOUND)
 #   # Fallback to cmake_modules
@@ -85,5 +85,12 @@ target_link_libraries(floam_laser_mapping_node ${EIGEN3_LIBRARIES} ${catkin_LIBR
 add_executable(floam_feature_extract_node src/featureExtractNode.cpp src/featureExtractClass.cpp )
 target_link_libraries(floam_feature_extract_node ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES})
 
-add_executable(floam_laser_odom_node src/laserOdomNode.cpp src/lidarOptimization.cpp src/lidar.cpp src/laserOdomClass.cpp include/ikd-Tree/ikd_Tree.cpp)
+add_executable(floam_laser_odom_node 
+                                  src/laserOdomNode.cpp 
+                                  src/lidarOptimization.cpp 
+                                  src/lidar.cpp 
+                                  src/laserOdomClass.cpp 
+                                  include/ikd-Tree/ikd_Tree.cpp
+                                  src/lidarOpt.cpp
+                                  src/utils.cpp)
 target_link_libraries(floam_laser_odom_node ${EIGEN3_LIBRARIES} ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${CERES_LIBRARIES})
