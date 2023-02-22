@@ -1,6 +1,13 @@
 # fast-lo
 fast-lo: Fast Laser Odom with new feature extract, truncated least squares and map manage.
 
+# feature
+
+  - Feature extract moudle is implemented based on w-loam and lio-sam
+  - map manage is implemented base on ikd-tree
+  - TLS is implemented base on tloam;
+
+
 # demo
 [**VIDEO-1: multi-storey garage**](https://www.bilibili.com/video/BV1b84y1k7VK/?spm_id_from=333.337.search-card.all.click&vd_source=438f630fe29bd5049b24c7f05b1bcaa3)
 
@@ -27,3 +34,11 @@ time compare: fast-lo VS floam
 <p align="center">
      <img width="1000pix" src="./figure/image4.png">
 </p>
+
+## TODO
+
+  - [ ] change project name
+  - [ ] add TLS
+
+## Acknowledgments
+Thanks for LOAM, FLOAM, [W-LOAM](https://github.com/Saki-Chen/W-LOAM),[tloam](https://github.com/zpw6106/tloam),[ikd-tree](https://github.com/hku-mars/ikd-Tree).
