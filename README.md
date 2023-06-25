@@ -66,4 +66,4 @@ time compare: fast-lo VS floam
   - [ ] refactor the code
 
 ## Acknowledgments
-Thanks for LOAM, FLOAM, [W-LOAM](https://github.com/Saki-Chen/W-LOAM),[tloam](https://github.com/zpw6106/tloam),[ikd-tree](https://github.com/hku-mars/ikd-Tree).
+Thanks for LOAM, FLOAM, [W-LOAM](https://github.com/Saki-Chen/W-LOAM),[tloam](https://github.com/zpw6106/tloam), LIO-SAM, [ikd-tree](https://github.com/hku-mars/ikd-Tree).
